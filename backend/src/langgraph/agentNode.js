@@ -93,16 +93,21 @@ async function callModel(state) {
   // Returns an AIMessage. If Gemini wants to use a tool, the message will have
   // a non-empty `tool_calls` array. Otherwise it contains the final text reply.
   let response
+  const abortController = new AbortController()
+  const timeoutId = setTimeout(() => abortController.abort(), 15000) // 15s timeout
+
   try {
-    response = await modelWithTools.invoke(fullMessages)
+    response = await modelWithTools.invoke(fullMessages, { signal: abortController.signal })
+    clearTimeout(timeoutId)
     logger.info(
       `[AgentNode:callModel] Response received — ` +
       `tool_calls: ${response.tool_calls?.length ?? 0}, ` +
       `content length: ${String(response.content || '').length} chars`
     )
   } catch (err) {
-    logger.error(`[AgentNode:callModel] Model invocation failed: ${err.message}`)
-    // Propagate — the controller will catch this and send an SSE error event.
+    clearTimeout(timeoutId)
+    logger.error(`[AgentNode:callModel] Model invocation failed: ${err.message || err}`)
+    // Propagate — the graph's agentNode wrapper will catch this and manage retries.
     throw err
   }
 

@@ -132,14 +132,17 @@ function buildCopilotGraph(checkpointer = null) {
         `(streak: ${newErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`
       )
       
-      // If we have reached the max consecutive errors, return the state so
-      // routeAfterAgent can route to 'fallback'. Otherwise, re-throw to
-      // let the controller handle the transient error.
-      if (newErrors >= MAX_CONSECUTIVE_ERRORS) {
-        return { consecutiveErrors: newErrors }
+      // Unconditionally return the updated state instead of throwing.
+      // If we throw, the LangGraph execution aborts, and the updated error 
+      // count is NOT persisted to the checkpointer. By returning the state,
+      // we allow `routeAfterAgent` to safely transition either back to 'agent'
+      // for a retry, or to 'fallback' if the limit is reached.
+      if (newErrors < MAX_CONSECUTIVE_ERRORS) {
+        logger.info(`[Graph:agentNode] Delaying 1s before internal retry...`)
+        await new Promise(r => setTimeout(r, 1000))
       }
-      
-      throw err
+
+      return { consecutiveErrors: newErrors }
     }
   }
 
@@ -247,6 +250,13 @@ function buildCopilotGraph(checkpointer = null) {
       )
       return 'fallback'
     }
+    
+    // Guard: there was an error, but we haven't hit the limit.
+    // Route back to 'agent' to internally retry the LLM call.
+    if (errors > 0) {
+      logger.info(`[Graph:routeAfterAgent] Retrying agent after failure (${errors}/${MAX_CONSECUTIVE_ERRORS})`)
+      return 'agent'
+    }
 
     // Delegate to LangGraph's prebuilt toolsCondition.
     // Returns 'tools' if state.messages[-1].tool_calls is non-empty, else END.
@@ -294,6 +304,7 @@ function buildCopilotGraph(checkpointer = null) {
     'agent',          // source node
     routeAfterAgent,  // routing function
     {
+      agent:    'agent',    // error streak < limit → retry agent
       tools:    'tools',    // tool_calls present → execute tools
       fallback: 'fallback', // error limit hit    → deterministic plan
       [END]:    END,        // final answer        → terminate graph
