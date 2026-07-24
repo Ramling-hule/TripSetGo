@@ -77,6 +77,9 @@ function mergeUserContext(existing, incoming) {
 //     - name         {string}  — user's display name
 //     - recentTrips  {Array}   — last N trips [{ destination }]
 //     Default: empty object (hydrated from req.user on every request).
+//
+//   consecutiveErrors {number}
+//     - Tracks consecutive callModel failures to trigger fallback logic.
 const CopilotState = Annotation.Root({
   /**
    * messages — Append-only conversation history.
@@ -124,6 +127,16 @@ const CopilotState = Annotation.Root({
   userContext: Annotation({
     reducer: mergeUserContext,
     default: () => ({}),
+  }),
+
+  /**
+   * consecutiveErrors — Tracks agent failures in the current graph run.
+   * Replaces the old closure-based counter to ensure thread-safety
+   * when multiple requests share the same compiled graph.
+   */
+  consecutiveErrors: Annotation({
+    reducer: (existing, incoming) => incoming,
+    default: () => 0,
   }),
 })
 

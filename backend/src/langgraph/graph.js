@@ -107,32 +107,38 @@ const MAX_CONSECUTIVE_ERRORS = 2
  */
 function buildCopilotGraph(checkpointer = null) {
 
-  // ── Per-run error counter ──────────────────────────────────────────────────
-  // Closed over by `agentNode` and `routeAfterAgent`.
-  // Resets to 0 on every successful callModel invocation.
-  let consecutiveErrors = 0
-
   // ─────────────────────────────────────────────────────────────────────────
   // Node: agentNode
   //
-  // Thin wrapper around Phase 2's `callModel` that tracks consecutive errors.
+  // Thin wrapper around Phase 2's `callModel` that tracks consecutive errors
+  // in the LangGraph state.
   //   • On success → resets `consecutiveErrors` to 0, returns the AIMessage.
-  //   • On failure → increments `consecutiveErrors`, re-throws so the
-  //     conditional edge can detect the streak and route to 'fallback'.
+  //   • On failure → increments `consecutiveErrors`, and returns the state
+  //     so the conditional edge can route to 'fallback' if the limit is reached.
   // ─────────────────────────────────────────────────────────────────────────
   async function agentNode(state) {
     try {
       const result = await callModel(state)
-      consecutiveErrors = 0
       logger.debug('[Graph:agentNode] callModel succeeded; error streak reset to 0')
-      return result
+      return {
+        ...result,
+        consecutiveErrors: 0
+      }
     } catch (err) {
-      consecutiveErrors += 1
+      const currentErrors = state.consecutiveErrors || 0
+      const newErrors = currentErrors + 1
       logger.error(
         `[Graph:agentNode] callModel failed ` +
-        `(streak: ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`
+        `(streak: ${newErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`
       )
-      // Re-throw: LangGraph will catch this and invoke the conditional edge.
+      
+      // If we have reached the max consecutive errors, return the state so
+      // routeAfterAgent can route to 'fallback'. Otherwise, re-throw to
+      // let the controller handle the transient error.
+      if (newErrors >= MAX_CONSECUTIVE_ERRORS) {
+        return { consecutiveErrors: newErrors }
+      }
+      
       throw err
     }
   }
@@ -232,11 +238,12 @@ function buildCopilotGraph(checkpointer = null) {
   // Return values must match the keys in `addConditionalEdges`'s routing map.
   // ─────────────────────────────────────────────────────────────────────────
   function routeAfterAgent(state) {
+    const errors = state.consecutiveErrors || 0
     // Guard: too many consecutive failures → deterministic fallback
-    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+    if (errors >= MAX_CONSECUTIVE_ERRORS) {
       logger.warn(
         `[Graph:routeAfterAgent] Consecutive error limit reached ` +
-        `(${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}). Routing to fallback.`
+        `(${errors}/${MAX_CONSECUTIVE_ERRORS}). Routing to fallback.`
       )
       return 'fallback'
     }
@@ -327,13 +334,9 @@ function buildCopilotGraph(checkpointer = null) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Singleton accessor (for tests / scripts)
 //
-// The compiled graph object is itself stateless — it contains no per-request
-// data.  However, the `consecutiveErrors` counter lives inside the factory
-// closure, so concurrent requests sharing one graph can corrupt each other's
-// error streak.
-//
-// RECOMMENDATION: Call `buildCopilotGraph()` inside each request handler.
-// The compile step is cheap (~1 ms); isolation is worth it.
+// The compiled graph object is itself stateless. Now that `consecutiveErrors`
+// is tracked in the LangGraph state instead of a closure, the compiled graph
+// is fully thread-safe and can be shared across concurrent requests.
 // ─────────────────────────────────────────────────────────────────────────────
 
 let _cachedGraph = null
@@ -341,9 +344,7 @@ let _cachedGraph = null
 /**
  * Returns a singleton compiled CopilotGraph (stateless, no checkpointer).
  *
- * ⚠️  Not safe for concurrent production traffic — all concurrent requests
- * share the same `consecutiveErrors` counter.  Use `buildCopilotGraph()` in
- * request handlers instead.
+ * Safe for concurrent production traffic since state is isolated per request.
  *
  * Provided for convenience in tests, CLI scripts, and single-threaded dev runs.
  *
