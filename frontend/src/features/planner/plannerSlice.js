@@ -3,9 +3,11 @@ import { plannerApi } from './plannerApi'
 
 // ── Async Thunk Wrappers for Backward Compatibility ──────────────────────────
 
-export const generatePlan = createAsyncThunk('planner/generatePlan', async (formData, { dispatch, rejectWithValue }) => {
+export const generatePlan = createAsyncThunk('planner/generatePlan', async (formData, { getState, dispatch, rejectWithValue }) => {
   try {
-    return await dispatch(plannerApi.endpoints.generatePlan.initiate(formData)).unwrap()
+    const threadId = getState().planner.copilotConversationId
+    const body = threadId ? { ...formData, thread_id: threadId } : formData
+    return await dispatch(plannerApi.endpoints.generatePlan.initiate(body)).unwrap()
   } catch (err) {
     return rejectWithValue(err.data?.message || err.message || 'Failed to generate plan')
   }
@@ -46,6 +48,10 @@ export const regenerateDay = createAsyncThunk('planner/regenerateDay', async ({ 
       groupType:    form.groupType || 'solo',
       preferences:  form.preferences || [],
       avoid:        avoid.slice(0, 60),
+    }
+
+    if (getState().planner.copilotConversationId) {
+      body.thread_id = getState().planner.copilotConversationId
     }
 
     const res = await dispatch(plannerApi.endpoints.regenerateDay.initiate(body)).unwrap()
