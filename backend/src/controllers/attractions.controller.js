@@ -37,7 +37,7 @@ exports.searchByCity = asyncHandler(async (req, res) => {
   if (!attractionsService.isProviderEnabled()) {
     return error(
       res,
-      'Attractions service is temporarily unavailable — provider not configured. Set OPENTRIPMAP_API_KEY in .env',
+      'Attractions service is temporarily unavailable — provider not configured.',
       503
     )
   }
@@ -61,7 +61,7 @@ exports.searchByCity = asyncHandler(async (req, res) => {
       radius:    parseInt(radius, 10) || 12000,
       limit:     parseInt(limit, 10) || 20,
       kinds:     kinds || null,
-      provider:  'OpenTripMap',
+      provider:  'Overpass',
     },
   }
 
@@ -111,7 +111,7 @@ exports.searchNearby = asyncHandler(async (req, res) => {
   if (!attractionsService.isProviderEnabled()) {
     return error(
       res,
-      'Attractions service is temporarily unavailable — provider not configured. Set OPENTRIPMAP_API_KEY in .env',
+      'Attractions service is temporarily unavailable — provider not configured.',
       503
     )
   }
@@ -136,7 +136,7 @@ exports.searchNearby = asyncHandler(async (req, res) => {
       radius:      parseInt(radius, 10) || 5000,
       limit:       parseInt(limit, 10) || 20,
       kinds:       kinds || null,
-      provider:    'OpenTripMap',
+      provider:    'Overpass',
     },
   }
 
@@ -170,7 +170,7 @@ exports.getDetail = asyncHandler(async (req, res) => {
   if (!attractionsService.isProviderEnabled()) {
     return error(
       res,
-      'Attractions service is temporarily unavailable — provider not configured. Set OPENTRIPMAP_API_KEY in .env',
+      'Attractions service is temporarily unavailable — provider not configured.',
       503
     )
   }

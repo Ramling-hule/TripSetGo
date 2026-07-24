@@ -18,7 +18,7 @@ export default function Avatar({ src, name, size = 'md', status, className = '' 
   const statusSize = Math.max(Math.round(px * 0.27), 8)
 
   return (
-    <div className={`relative inline-flex shrink-0 ${className}`} style={{ width: px, height: px }}>
+    <div className={`relative inline-flex shrink-0 rounded-full ${className}`} style={{ width: px, height: px }}>
       <div
         style={{
           width: px,

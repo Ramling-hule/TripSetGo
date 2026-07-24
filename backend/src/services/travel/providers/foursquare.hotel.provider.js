@@ -26,10 +26,11 @@ const FSQ_HOTEL_CATEGORIES = '19014'
 
 // ── Fields Requested ─────────────────────────────────────────────────────────
 const FSQ_LIST_FIELDS = [
-  'fsq_id',
+  'fsq_place_id',
   'name',
   'categories',
-  'geocodes',
+  'latitude',
+  'longitude',
   'location',
   'distance',
   'rating',
@@ -39,7 +40,6 @@ const FSQ_LIST_FIELDS = [
   'price',
   'tel',
   'website',
-  'verified',
   'popularity',
 ].join(',')
 
@@ -47,7 +47,7 @@ const FSQ_DETAIL_FIELDS = [
   ...FSQ_LIST_FIELDS.split(','),
   'description',
   'hours_popular',
-  'features',
+  'attributes',
   'tips',
 ].join(',')
 
@@ -63,6 +63,7 @@ class FoursquareHotelProvider extends BaseProvider {
   async request(path, params = {}, headers = {}) {
     const key = this.keyRotator.next()
     if (key) headers.Authorization = key
+    headers['X-Places-Api-Version'] = '2025-06-17'
     return super.request(path, params, headers)
   }
 

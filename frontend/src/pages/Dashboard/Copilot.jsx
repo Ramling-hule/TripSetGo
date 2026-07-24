@@ -13,7 +13,6 @@ import {
 import { useMapbox } from '@/hooks/useMapbox'
 import MapContainer from '@/components/map/MapContainer'
 import ChatBubble from '@/components/domain/ChatBubble'
-import ThinkingDots from '@/components/domain/ThinkingDots'
 import api from '@/services/api'
 import { 
   fetchMyTrips, fetchTrip, selectTrips, selectCurrentTrip, 
@@ -591,9 +590,7 @@ export default function Copilot() {
             ))
           )}
 
-          {streaming && messages[messages.length - 1]?.text === '' && (
-            <ThinkingDots className="self-start mt-2 ml-10 shadow-sm border border-border/30" />
-          )}
+
         </div>
 
         {/* Input area composer */}

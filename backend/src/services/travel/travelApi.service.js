@@ -147,10 +147,10 @@ async function enrichPlan(plan, input) {
 
   const [attractionResult, hotelsRaw, weatherRaw] = await Promise.allSettled([
     (async () => {
-      providersAttempted.push('OpenTripMap', 'Foursquare')
+      providersAttempted.push('Overpass', 'Foursquare')
       const r = await registry.fetchAttractions({ lat, lon, radiusM: 12000, limit: 20 })
       if (r.primary.length || r.secondary.length) {
-        providersSucceeded.push('OpenTripMap')
+        providersSucceeded.push('Overpass')
         if (r.secondary.length) providersSucceeded.push('Foursquare')
       }
       return r

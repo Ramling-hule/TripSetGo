@@ -1,7 +1,7 @@
 // backend/src/services/travel/providers/foursquare.provider.js
 // ─────────────────────────────────────────────────────────────────────────────
 // Foursquare Places v3 provider — secondary source for attraction data.
-// Used when OpenTripMap lacks results or as enrichment with photos + ratings.
+// Used when Overpass lacks results or as enrichment with photos + ratings.
 //
 // API: GET /places/search
 //   Headers: Authorization: <api_key>
@@ -21,8 +21,8 @@ const FSQ_CATEGORIES = '16000,10000,15000,19000'
 
 // Fields to request (minimise response size to conserve quota)
 const FSQ_FIELDS = [
-  'fsq_id', 'name', 'categories', 'geocodes', 'location',
-  'distance', 'rating', 'stats', 'photos', 'price', 'verified',
+  'fsq_place_id', 'name', 'categories', 'latitude', 'longitude', 'location',
+  'distance', 'rating', 'stats', 'photos', 'price',
 ].join(',')
 
 class FoursquareProvider extends BaseProvider {
@@ -37,6 +37,7 @@ class FoursquareProvider extends BaseProvider {
   async request(path, params = {}, headers = {}) {
     const key = this.keyRotator.next()
     if (key) headers.Authorization = key
+    headers['X-Places-Api-Version'] = '2025-06-17'
     return super.request(path, params, headers)
   }
 

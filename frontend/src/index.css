@@ -81,6 +81,7 @@
   /* Active by default (app launches in dark mode)                            */
   --color-surface-base:     #0E1117;
   --color-surface-default:  #161D27;
+  --color-surface:          #161D27;
   --color-surface-raised:   #1F2A38;
   --color-surface-overlay:  #283649;
   --color-surface-scrim:    rgba(0, 0, 0, 0.72);

@@ -26,13 +26,26 @@ export function useMapbox(options = {}) {
     }
     if (!mapContainerRef.current || mapRef.current) return
 
+    const token = import.meta.env.VITE_MAPBOX_TOKEN || ''
+    if (!token) {
+      setMapError('Mapbox VITE_MAPBOX_TOKEN is missing in your .env configuration. Please add it and restart the dev server.')
+      return
+    }
+
     const opts = initOptionsRef.current
-    const instance = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style:     opts.style  || 'mapbox://styles/mapbox/streets-v12',
-      center:    opts.center || [78.9629, 20.5937],
-      zoom:      opts.zoom   || 4,
-    })
+    let instance
+    try {
+      instance = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style:     opts.style  || 'mapbox://styles/mapbox/streets-v12',
+        center:    opts.center || [78.9629, 20.5937],
+        zoom:      opts.zoom   || 4,
+      })
+    } catch (err) {
+      console.error('Mapbox init error:', err)
+      setMapError(err.message || 'Failed to initialize Mapbox canvas')
+      return
+    }
 
     instance.addControl(new mapboxgl.NavigationControl(), 'top-right')
     instance.addControl(new mapboxgl.ScaleControl(), 'bottom-left')

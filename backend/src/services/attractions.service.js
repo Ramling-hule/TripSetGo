@@ -4,14 +4,14 @@
 //
 // This service orchestrates:
 //   1. Cache lookup (Redis via cache.service.js)
-//   2. OpenTripMap API fetch (via opentripmap.provider.js)
+//   2. API fetch (via overpass.provider.js or foursquare.attraction.provider.js)
 //   3. MongoDB persistence (fire-and-forget upsert via Attraction model)
 //   4. Response shaping and sorting
 //
 // Public API:
 //   searchByCity(city, options)          → { attractions[], geo, total, cached }
 //   searchNearby(lat, lon, options)      → { attractions[], total, cached }
-//   getAttractionDetail(xid, options)    → NormalisedAttraction | null
+//   getAttractionDetail(sourceId, options)    → NormalisedAttraction | null
 //   invalidateCity(city)                 → void (cache bust)
 //   getProviderHealth()                  → health status object
 //
@@ -20,11 +20,11 @@
 //   ─────────────────────────────────────────────────────────────
 //   attractions:city          900s    city + limit + kinds + radius
 //   attractions:nearby        600s    lat,lon,radius,limit,kinds
-//   attractions:detail        1800s   xid
+//   attractions:detail        1800s   sourceId
 //
 // MongoDB persistence strategy (fire-and-forget):
-//   - Upsert by `xid` (unique OTM identifier)
-//   - Only persists attractions with a valid xid
+//   - Upsert by `sourceId` (unique provider identifier)
+//   - Only persists attractions with a valid id
 //   - `lastFetchedAt` tracks data freshness
 //   - DB errors are logged and swallowed — never block the API response
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,23 +82,23 @@ function sortAttractions(attractions) {
 
 /**
  * Fire-and-forget: upsert a batch of normalised attractions into MongoDB.
- * Only persists items that have a valid xid (OTM unique ID).
+ * Only persists items that have a valid id.
  * Does NOT block the API response — errors are swallowed.
  *
  * @param {NormalisedAttraction[]} attractions
  * @param {string} [city]  — Optional city tag for the record
  */
 async function persistAttractions(attractions, city) {
-  const withId = attractions.filter(a => a.xid || a.id)
+  const withId = attractions.filter(a => a.id)
   if (!withId.length) return
 
   const ops = withId.map(a => {
-    const xid = a.xid || a.id
+    const sourceId = a.id
     const lon = a.coordinates?.lon || a.coordinates?.lng || 0
     const lat = a.coordinates?.lat || 0
     return {
       updateOne: {
-        filter: { xid },
+        filter: { sourceId },
         update: {
           $set: {
             name:             a.name,
@@ -305,17 +305,17 @@ async function searchNearby(lat, lon, opts = {}) {
  * Get full details for a single attraction by its unique ID.
  * Checks DB first for a recently-cached record; fetches from provider on miss.
  *
- * @param {string} xid — unique attraction ID (osm:... or fsq:...)
+ * @param {string} sourceId — unique attraction ID (osm:... or fsq:...)
  * @param {Object} [opts]
  * @param {boolean} [opts.forceRefresh=false] — Bypass cache and DB, always re-fetch
  * @returns {Promise<NormalisedAttraction | null>}
  */
-async function getAttractionDetail(xid, opts = {}) {
+async function getAttractionDetail(sourceId, opts = {}) {
   const { forceRefresh = false } = opts
 
-  if (!xid?.trim()) return null
+  if (!sourceId?.trim()) return null
 
-  const cacheRaw = `detail:${xid}`
+  const cacheRaw = `detail:${sourceId}`
 
   // ── Cache lookup (skip on forceRefresh) ───────────────────────────────────
   if (!forceRefresh) {
@@ -328,17 +328,16 @@ async function getAttractionDetail(xid, opts = {}) {
     // ── DB lookup — check if we have a recent record ──────────────────────
     try {
       const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000 // 24h
-      const dbRecord = await Attraction.findOne({ xid }).lean()
+      const dbRecord = await Attraction.findOne({ sourceId }).lean()
 
       if (dbRecord && dbRecord.lastFetchedAt) {
         const age = Date.now() - new Date(dbRecord.lastFetchedAt).getTime()
         if (age < STALE_THRESHOLD_MS) {
-          logger.info(`[AttractionsService] DB HIT detail xid="${xid}" (age ${Math.round(age / 60000)}min)`)
+          logger.info(`[AttractionsService] DB HIT detail sourceId="${sourceId}" (age ${Math.round(age / 60000)}min)`)
 
           // Reshape DB record to NormalisedAttraction schema
           const fromDB = {
-            id:             dbRecord.xid,
-            xid:            dbRecord.xid,
+            id:             dbRecord.sourceId,
             source:         dbRecord.source || 'OpenStreetMap',
             name:           dbRecord.name,
             category:       dbRecord.category,
@@ -368,18 +367,18 @@ async function getAttractionDetail(xid, opts = {}) {
         }
       }
     } catch (err) {
-      logger.warn(`[AttractionsService] DB lookup failed for xid="${xid}": ${err.message}`)
+      logger.warn(`[AttractionsService] DB lookup failed for sourceId="${sourceId}": ${err.message}`)
     }
   }
 
-  logger.info(`[AttractionsService] CACHE/DB MISS detail xid="${xid}" — fetching from provider`)
+  logger.info(`[AttractionsService] CACHE/DB MISS detail sourceId="${sourceId}" — fetching from provider`)
 
   // ── Provider Fetch ────────────────────────────────────────────────────────
   let detail = null
-  if (xid.startsWith('osm:')) {
-    detail = await overpassProvider.fetchAttractionDetail(xid)
-  } else if (xid.startsWith('fsq:')) {
-    detail = await fsqAttrProvider.getAttractionDetail(xid.replace(/^fsq:/, ''))
+  if (sourceId.startsWith('osm:')) {
+    detail = await overpassProvider.fetchAttractionDetail(sourceId)
+  } else if (sourceId.startsWith('fsq:')) {
+    detail = await fsqAttrProvider.getAttractionDetail(sourceId.replace(/^fsq:/, ''))
   }
 
   if (!detail) return null

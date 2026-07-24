@@ -3,7 +3,7 @@
 // Runtime provider registry with priority-ordered chains per data domain.
 //
 // Defines:
-//   attractions: OpenTripMap (primary) → Foursquare[Attractions] (secondary)
+//   attractions: Overpass (primary) → Foursquare[Attractions] (secondary)
 //   hotels:      Foursquare[Hotels] (sole provider, replaces Amadeus)
 //   weather:     OpenWeather (sole provider)
 //

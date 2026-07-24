@@ -1,13 +1,13 @@
 // server/src/models/Attraction.model.js
 // ─────────────────────────────────────────────────────────────────────────────
-// Extended Attraction model with OpenTripMap fields for the Attractions
-// Discovery Service. Persists normalised data from OTM (and other providers).
+// Extended Attraction model for the Attractions Discovery Service.
+// Persists normalised data from Overpass (and other providers).
 //
 // Persistence strategy:
-//   - Primary key: `xid` (OTM unique ID) — upserted via bulkWrite
+//   - Primary key: `osmId` (or generated) — upserted via bulkWrite
 //   - Geospatial: 2dsphere index on `location` for nearby queries
 //   - Compound indexes: (city, popularityScore), (city, category)
-//   - Staleness: `lastFetchedAt` — re-fetch from OTM if older than 24h
+//   - Staleness: `lastFetchedAt` — re-fetch from API if older than 24h
 // ─────────────────────────────────────────────────────────────────────────────
 const mongoose = require('mongoose')
 
@@ -59,26 +59,26 @@ const attractionSchema = new mongoose.Schema({
   },
   images: [{ type: String }],
 
-  // ── OpenTripMap-specific fields ────────────────────────────────────────
+  // ── Provider-specific fields ────────────────────────────────────────
+
   /**
-   * OTM unique identifier (e.g. "Q133182", "W12345678").
-   * Used as the primary upsert key for OTM-sourced records.
-   * Sparse to allow non-OTM documents without an xid.
+   * Unique identifier from the source provider (e.g. "osm:node:123", "fsq:456").
+   * Used as the primary upsert key for records.
    */
-  xid: {
+  sourceId: {
     type:   String,
     index:  true,
-    sparse: true, // allows multiple null documents
+    sparse: true,
     unique: true,
     trim:   true,
   },
 
   /**
-   * Data source provider (e.g. 'OpenTripMap', 'OpenStreetMap', 'Foursquare').
+   * Data source provider (e.g. 'OpenStreetMap', 'Foursquare').
    */
   source: {
     type:    String,
-    default: 'OpenTripMap',
+    default: 'OpenStreetMap',
     index:   true,
   },
 
@@ -98,14 +98,7 @@ const attractionSchema = new mongoose.Schema({
     index:   true,
   },
 
-  /**
-   * OTM category kinds — comma-separated tags e.g. ['museums', 'cultural', 'interesting_places']
-   */
-  kinds: {
-    type:    [String],
-    default: [],
-    index:   true,
-  },
+
 
   /**
    * Attraction website URL.

@@ -143,6 +143,14 @@ export default function Subscription () {
   useEffect(() => {
     dispatch(fetchSubscriptionStatus())
     dispatch(fetchPlans())
+
+    // Dynamically load Razorpay SDK on mount
+    if (typeof window !== 'undefined' && !window.Razorpay) {
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
+      document.body.appendChild(script)
+    }
   }, [dispatch])
 
   const plans = subscription.plans.length ? subscription.plans : PLANS_FALLBACK

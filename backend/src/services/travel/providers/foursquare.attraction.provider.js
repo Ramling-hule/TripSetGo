@@ -4,7 +4,7 @@
 //
 // Dedicated FSQ provider for tourist attractions, museums, parks, and
 // historical places. Used as the secondary fallback in the provider registry
-// (primary = Overpass/OpenTripMap).
+// (primary = Overpass).
 //
 // FSQ Category IDs used:
 //   16000 = Outdoors & Recreation (tourist sites, general)

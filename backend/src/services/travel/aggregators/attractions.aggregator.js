@@ -1,9 +1,9 @@
 // backend/src/services/travel/aggregators/attractions.aggregator.js
 // ─────────────────────────────────────────────────────────────────────────────
-// Merges and deduplicates attraction results from OpenTripMap + Foursquare.
+// Merges and deduplicates attraction results from Overpass + Foursquare.
 //
 // Strategy:
-//   1. OTM is PRIMARY (broad coverage, free, no daily cap)
+//   1. Overpass is PRIMARY (broad coverage, free, no daily cap)
 //   2. FSQ is SECONDARY (better ratings/photos, 950/day cap — used sparingly)
 //   3. Deduplicate by proximity (< 150m apart = same place)
 //   4. Prefer FSQ entry when duplicated (better data quality)
@@ -45,15 +45,15 @@ function score(attraction) {
 }
 
 /**
- * Merge OTM + FSQ results, deduplicate, sort by score.
+ * Merge Overpass + FSQ results, deduplicate, sort by score.
  *
- * @param {NormalisedAttraction[]} otmList  — From OpenTripMap
+ * @param {NormalisedAttraction[]} primaryList  — From Overpass (OpenStreetMap)
  * @param {NormalisedAttraction[]} fsqList  — From Foursquare
  * @param {number} [limit=MAX_RESULTS]
  * @returns {NormalisedAttraction[]}
  */
-function aggregate(otmList = [], fsqList = [], limit = MAX_RESULTS) {
-  const all = [...otmList, ...fsqList]
+function aggregate(primaryList = [], fsqList = [], limit = MAX_RESULTS) {
+  const all = [...primaryList, ...fsqList]
 
   if (all.length === 0) return []
 
@@ -88,7 +88,7 @@ function aggregate(otmList = [], fsqList = [], limit = MAX_RESULTS) {
   const sorted = kept.sort((a, b) => score(b) - score(a)).slice(0, limit)
 
   travelLogger.info('AttractionsAggregator', `Aggregated ${sorted.length} attractions`, {
-    otmInput: otmList.length,
+    primaryInput: primaryList.length,
     fsqInput: fsqList.length,
     merged:   kept.length,
     returned: sorted.length,

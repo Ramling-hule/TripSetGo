@@ -1,7 +1,7 @@
 // backend/src/services/travel/providers/overpass.provider.js
 // ─────────────────────────────────────────────────────────────────────────────
 // OpenStreetMap Overpass API provider — primary source for attraction data.
-// Replaces OpenTripMap entirely.
+// Primary attractions provider.
 //
 // Overpass API:
 //   Endpoint:   https://overpass-api.de/api/interpreter  (POST, body = OverpassQL)

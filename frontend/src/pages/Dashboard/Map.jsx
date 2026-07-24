@@ -35,7 +35,7 @@ const DEFAULT_IMAGES = {
 function normaliseHotel(h, idx) {
   if (!h?.coordinates?.lat || !h?.coordinates?.lon) return null
   return {
-    _id: h.fsqId || h.id || `hotel-${idx}`,
+    _id: h.providerPlaceId || h.id || `hotel-${idx}`,
     _entityType: 'Hotel',
     name: h.name || 'Unknown Hotel',
     location: { type: 'Point', coordinates: [h.coordinates.lon, h.coordinates.lat] },
@@ -53,7 +53,7 @@ function normaliseHotel(h, idx) {
 function normaliseRestaurant(r, idx) {
   if (!r?.coordinates?.lat || !r?.coordinates?.lon) return null
   return {
-    _id: r.fsqId || r.id || `restaurant-${idx}`,
+    _id: r.providerPlaceId || r.id || `restaurant-${idx}`,
     _entityType: 'Restaurant',
     name: r.name || 'Unknown Restaurant',
     location: { type: 'Point', coordinates: [r.coordinates.lon, r.coordinates.lat] },

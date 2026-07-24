@@ -79,7 +79,7 @@ export const travelApiSlice = apiSlice.injectEndpoints({
       }),
     }),
     getRestaurantDetails: builder.query({
-      query: (fsqId) => `/api/v1/restaurants/${fsqId}`,
+      query: (placeId) => `/api/v1/restaurants/${placeId}`,
     }),
     searchHotelsByCity: builder.query({
       query: ({ city, limit = 20, radius = 5000 } = {}) => ({
@@ -94,7 +94,7 @@ export const travelApiSlice = apiSlice.injectEndpoints({
       }),
     }),
     getHotelDetails: builder.query({
-      query: (fsqId) => `/api/v1/hotels/${fsqId}`,
+      query: (placeId) => `/api/v1/hotels/${placeId}`,
     }),
   }),
 })
@@ -150,13 +150,13 @@ export const travelApi = {
     api.get(`/api/v1/restaurants/city`, { params: { city, limit, radius, cuisine, openNow, minPrice, maxPrice } }),
   searchRestaurantsNearby: (lat, lon, limit = 20, radius = 2000, cuisine, openNow, minPrice, maxPrice) =>
     api.get(`/api/v1/restaurants/nearby`, { params: { lat, lon, limit, radius, cuisine, openNow, minPrice, maxPrice } }),
-  getRestaurantDetails: (fsqId) =>
-    api.get(`/api/v1/restaurants/${fsqId}`),
+  getRestaurantDetails: (placeId) =>
+    api.get(`/api/v1/restaurants/${placeId}`),
 
   searchHotelsByCity: (city, limit = 20, radius = 5000) =>
     api.get(`/api/v1/hotels/search`, { params: { city, limit, radius } }),
   searchHotelsNearby: (lat, lon, limit = 20, radius = 2000) =>
     api.get(`/api/v1/hotels/nearby`, { params: { lat, lon, limit, radius } }),
-  getHotelDetails: (fsqId) =>
-    api.get(`/api/v1/hotels/${fsqId}`),
+  getHotelDetails: (placeId) =>
+    api.get(`/api/v1/hotels/${placeId}`),
 }

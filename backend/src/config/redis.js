@@ -47,9 +47,18 @@ const connectRedis = async () => {
     // can use ZADD / ZREVRANGE / ZREMRANGEBYRANK directly
     global.__redisClient = redisClient
 
-    redisClient.on('ready', () => {
+    redisClient.on('ready', async () => {
       logger.info('🚀 Connected to Redis Cloud (AWS) successfully')
       useMemoryFallback = false
+      
+      // Attempt to set eviction policy for BullMQ compliance.
+      // This may fail on managed Redis instances where CONFIG SET is restricted, so we catch the error.
+      try {
+        await redisClient.config('SET', 'maxmemory-policy', 'noeviction')
+        logger.debug('⚙️  Redis maxmemory-policy configured to "noeviction"')
+      } catch (err) {
+        logger.debug(`ℹ️  Could not set maxmemory-policy via CONFIG SET (expected on some managed instances): ${err.message}`)
+      }
     })
 
     redisClient.on('error', (err) => {

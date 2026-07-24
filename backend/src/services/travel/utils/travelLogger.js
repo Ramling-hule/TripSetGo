@@ -7,7 +7,7 @@
 // can swap the underlying logger without touching provider code.
 //
 // Usage:
-//   travelLogger.info('OpenTripMap', 'Fetched 20 attractions', { latencyMs: 123 })
+//   travelLogger.info('Overpass', 'Fetched 20 attractions', { latencyMs: 123 })
 //   travelLogger.warn('Foursquare', 'Rate limit hit', { retryAfterMs: 800 })
 //   travelLogger.metric({ event: 'travel:request', destination: 'Goa', ... })
 // ─────────────────────────────────────────────────────────────────────────────

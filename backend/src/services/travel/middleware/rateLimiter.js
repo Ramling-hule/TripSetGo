@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Per-provider rate limiter supporting three strategies:
 //
-//  • token-bucket    — for per-second APIs (OpenTripMap, Amadeus, Nominatim)
+//  • token-bucket    — for per-second APIs (Overpass, Amadeus, Nominatim)
 //                      Uses an in-memory token bucket; refills at the window rate.
 //
 //  • sliding-window  — for per-minute APIs (OpenWeather)
