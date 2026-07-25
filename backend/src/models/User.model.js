@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema({
   tripsCount:      { type: Number, default: 0 },
   travelInterests: [{ type: String }],
   favoriteDestinations: [{ type: String }],
+  preferences:     [{ type: String }],
   reputationScore: { type: Number, default: 0 },
   badges:          [{ type: String }],
   status:          { type: String, enum: ['active', 'suspended', 'deleted'], default: 'active' },

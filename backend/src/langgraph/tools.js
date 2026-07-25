@@ -447,6 +447,80 @@ function createCalculateBudgetImpactTool(tripContext) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TOOL 4 — save_user_preference
+//
+// Extracts and saves long-term user preferences to the user's database record.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const saveUserPreferenceSchema = z.object({
+  preference: z
+    .string()
+    .min(3, 'preference must be at least 3 characters')
+    .max(200, 'preference is too long')
+    .describe('The user preference to save in a concise format, e.g., "Prefers vegetarian food", "Travels on a tight budget".'),
+})
+
+/**
+ * Creates a `save_user_preference` tool that closes over `userContext`
+ * so it can access `userId` from State to update the User model.
+ *
+ * @param {object} userContext — The userContext channel from CopilotState
+ * @returns {import('@langchain/core/tools').DynamicStructuredTool}
+ */
+function createSaveUserPreferenceTool(userContext) {
+  return tool(
+    async ({ preference }) => {
+      logger.info(`[Tool:save_user_preference] preference="${preference}"`)
+
+      if (!userContext || !userContext.userId) {
+        return JSON.stringify({
+          ok: false,
+          message: 'No user is currently linked to this conversation. Cannot save preference.',
+        })
+      }
+
+      try {
+        const User = require('../models/User.model')
+        const user = await User.findById(userContext.userId)
+
+        if (!user) {
+          return JSON.stringify({
+            ok: false,
+            message: 'User not found in the database.',
+          })
+        }
+
+        if (!user.preferences) {
+          user.preferences = []
+        }
+
+        user.preferences.push(preference)
+        await user.save()
+
+        return JSON.stringify({
+          ok: true,
+          message: `Preference saved successfully: "${preference}"`,
+        })
+      } catch (err) {
+        logger.error(`[Tool:save_user_preference] Error: ${err.message}`)
+        return JSON.stringify({
+          ok: false,
+          error: `Failed to save preference: ${err.message}`,
+        })
+      }
+    },
+    {
+      name: 'save_user_preference',
+      description:
+        'Save a long-term user preference to the database (e.g., "I prefer vegetarian food", "I travel on a tight budget"). ' +
+        'Call this tool whenever the user explicitly states a preference about how they travel, eat, or stay. ' +
+        'These preferences are remembered across all future conversations.',
+      schema: saveUserPreferenceSchema,
+    }
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tool Factory — createCopilotTools(state)
 //
 // Creates the full tool array for a single agent invocation, binding the
@@ -461,11 +535,13 @@ function createCalculateBudgetImpactTool(tripContext) {
 
 function createCopilotTools(state) {
   const tripContext = state?.tripContext || {}
+  const userContext = state?.userContext || {}
 
   return [
     searchPlaces,                                  // stateless — always the same instance
     createFetchTripDetailsTool(tripContext),        // re-created with fresh tripContext
     createCalculateBudgetImpactTool(tripContext),   // re-created with fresh tripContext
+    createSaveUserPreferenceTool(userContext),      // re-created with fresh userContext
   ]
 }
 
@@ -475,4 +551,5 @@ module.exports = {
   searchPlaces,
   createFetchTripDetailsTool,
   createCalculateBudgetImpactTool,
+  createSaveUserPreferenceTool,
 }
