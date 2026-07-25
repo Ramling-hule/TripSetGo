@@ -114,6 +114,10 @@ const processor = async (job) => {
   // ── Progress 10%: context loaded ──────────────────────────────────────────
   await job.updateProgress(10)
 
+  // ── 2b. Load user record for long-term preferences ────────────────────────
+  const User = require('../models/User.model')
+  const userRecord = await User.findById(userId).select('name preferences')
+
   // ── 3. Persist the user message ───────────────────────────────────────────
   await Message.create({
     conversationId: conversation._id,
@@ -140,7 +144,11 @@ const processor = async (job) => {
           totalDays:    trip.planData?.meta?.total_days,
         }
       : {},
-    userContext: { userId },
+    userContext: {
+      userId,
+      name:        userRecord?.name,
+      preferences: userRecord?.preferences || [],
+    },
   }
 
   const config = {

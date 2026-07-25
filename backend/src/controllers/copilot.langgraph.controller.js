@@ -150,7 +150,9 @@ exports.streamChatLG = asyncHandler(async (req, res) => {
         }
       : {},
     userContext: {
+      userId:      req.user._id.toString(),
       name:        req.user.name,
+      preferences: req.user.preferences || [],
       recentTrips: recentTrips.map((t) => ({ destination: t.destination })),
     },
   }
