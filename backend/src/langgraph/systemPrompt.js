@@ -61,7 +61,9 @@ const PERSONA_LINES = [
  *   @param {string[]} [tripContext.preferences]
  *
  * @param {object} userContext  - State channel: userContext
+ *   @param {string}   [userContext.userId]
  *   @param {string}   [userContext.name]
+ *   @param {string[]} [userContext.preferences]
  *   @param {Array}    [userContext.recentTrips]  - [{ destination }]
  *
  * @returns {string}  The fully-assembled system prompt text.
@@ -114,6 +116,13 @@ function buildSystemPromptText(tripContext, userContext) {
     if (Array.isArray(preferences) && preferences.length > 0) {
       lines.push(`Trip preferences: ${preferences.join(', ')}.`)
     }
+  }
+
+  // ── Long-term User Preferences ──────────────────────────────────────────────
+  // Baseline understanding of the user's general likes/dislikes (saved from previous chats).
+  const userPreferences = userContext?.preferences
+  if (Array.isArray(userPreferences) && userPreferences.length > 0) {
+    lines.push(`The user has the following long-term travel preferences: ${userPreferences.join('; ')}.`)
   }
 
   // ── Travel history ──────────────────────────────────────────────────────────
