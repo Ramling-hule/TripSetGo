@@ -79,4 +79,30 @@ function resetCheckpointer() {
   _checkpointer = null
 }
 
-module.exports = { getCheckpointer, resetCheckpointer }
+/**
+ * Extracts a simplified chat history array from the checkpointer for a given thread.
+ * Returns an array of { role: 'user' | 'assistant', text: string }.
+ */
+async function getChatHistory(thread_id) {
+  if (!thread_id) return []
+  try {
+    const cp = await getCheckpointer()
+    const tuple = await cp.getTuple({ configurable: { thread_id } })
+    if (!tuple?.checkpoint?.channel_values?.messages) return []
+
+    const messages = tuple.checkpoint.channel_values.messages
+    return messages.map(m => {
+      // LangChain BaseMessage objects serialized to JSON usually have 'id' arrays containing the class name,
+      // or a 'type' property (like 'human', 'ai').
+      const isHuman = m.type === 'human' || (m.id && m.id.includes('HumanMessage'))
+      const role = isHuman ? 'user' : 'assistant'
+      const text = typeof m.content === 'string' ? m.content : (m.kwargs?.content || '')
+      return { role, text }
+    }).filter(m => m.text)
+  } catch (err) {
+    logger.warn(`[Checkpointer] Failed to fetch chat history for thread ${thread_id}: ${err.message}`)
+    return []
+  }
+}
+
+module.exports = { getCheckpointer, resetCheckpointer, getChatHistory }

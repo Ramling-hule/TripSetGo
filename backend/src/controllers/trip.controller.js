@@ -18,7 +18,7 @@ const { withTransaction } = require('../utils/transaction')
 // ── POST /api/v1/trips — Generate AI trip plan ───────────────────────────
 
 exports.createTrip = asyncHandler(async (req, res) => {
-  const { source, destination, startDate, endDate, budget, numTravelers, groupType, pace, preferences, copilotConversationId } = req.body
+  const { source, destination, startDate, endDate, budget, numTravelers, groupType, pace, preferences, thread_id } = req.body
   if (!source || !destination || !startDate || !endDate || !budget) {
     return badRequest(res, 'source, destination, startDate, endDate and budget are required')
   }
@@ -74,7 +74,7 @@ exports.createTrip = asyncHandler(async (req, res) => {
       tripId: trip._id.toString(),
       tripData,
       userId: req.user._id.toString(),
-      copilotConversationId,
+      thread_id,
     }, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 5000 }

@@ -123,13 +123,19 @@ exports.generatePlan = asyncHandler(async (req, res) => {
 exports.regenerateDay = asyncHandler(async (req, res) => {
   const {
     source, destination, dayNumber, totalDays, budget,
-    numTravelers, groupType, preferences, avoid,
+    numTravelers, groupType, preferences, avoid, thread_id,
   } = req.body
+
+  let chatHistory = []
+  if (thread_id) {
+    const { getChatHistory } = require('../langgraph/checkpointer')
+    chatHistory = await getChatHistory(thread_id)
+  }
 
   let day = await regenerateItineraryDay({
     source, destination, dayNumber, totalDays, budget,
     numTravelers, groupType, preferences, avoid,
-  })
+  }, chatHistory)
   let usedFallback = false
 
   if (!day) {
