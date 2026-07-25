@@ -5,7 +5,6 @@ const fallback = require('../planning/fallbackPlanner');
 const ragService = require('../services/rag.service');
 const cacheService = require('../services/cache.service');
 const Trip = require('../models/Trip.model');
-const Message = require('../models/Message.model');
 const { logFailedJob } = require('../services/dlq.service');
 const logger = require('../utils/logger');
 
@@ -14,23 +13,17 @@ const processor = async (job) => {
   logger.info(`[Itinerary Worker] Processing job ${job.id} - Type: ${type}`);
 
   if (type === 'trip') {
-    const { tripId, tripData, copilotConversationId } = job.data;
+    const { tripId, tripData, thread_id } = job.data;
     const trip = await Trip.findById(tripId);
     if (!trip) {
       throw new Error(`Trip ${tripId} not found`);
     }
 
-    // Fetch Copilot Chat History
+    // Fetch Copilot Chat History from LangGraph Checkpointer
     let chatHistory = [];
-    if (copilotConversationId) {
-      try {
-        const messages = await Message.find({ conversationId: copilotConversationId })
-          .sort({ createdAt: 1 })
-          .lean();
-        chatHistory = messages.map(m => ({ role: m.role || 'user', text: m.text }));
-      } catch (err) {
-        logger.warn(`Failed to fetch copilot history: ${err.message}`);
-      }
+    if (thread_id) {
+      const { getChatHistory } = require('../langgraph/checkpointer');
+      chatHistory = await getChatHistory(thread_id);
     }
 
     // Build RAG Context to eliminate dummy data

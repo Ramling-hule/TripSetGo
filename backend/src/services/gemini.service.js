@@ -301,16 +301,24 @@ Rules:
 async function regenerateItineraryDay({
   source, destination, dayNumber, totalDays,
   budget, numTravelers = 1, groupType = 'solo', preferences = [], avoid = [],
-}) {
+}, chatHistory = []) {
   const model = genAI.getGenerativeModel({ model: MODEL })
 
   const perDayBudget = Math.round(Number(budget) / Math.max(Number(totalDays) || 1, 1))
+
+  const chatHistoryStr = chatHistory?.length > 0 
+    ? chatHistory.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n')
+    : 'None';
 
   const prompt = `
 You are an expert travel planner AI. Regenerate ONLY day ${dayNumber} of a ${totalDays}-day trip to ${destination}${source ? ` (travelling from ${source})` : ''}.
 Travelers: ${numTravelers} (${groupType}). Spend roughly ₹${perDayBudget} INR on this day's activities.
 Preferences: ${preferences.join(', ') || 'general travel'}.
 ${avoid.length ? `Do NOT repeat any of these places already planned on other days: ${avoid.slice(0, 40).join(', ')}.` : ''}
+
+User Chat History & Specific Requests:
+${chatHistoryStr}
+(CRITICAL: Prioritize any specific requests or feedback from the chat above when picking new activities for this day).
 
 Return ONLY valid JSON (no markdown, no explanation) with EXACTLY this schema:
 {
